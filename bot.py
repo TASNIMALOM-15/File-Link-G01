@@ -128,10 +128,11 @@ async def start_web():
     site = web.TCPSite(runner, "0.0.0.0", PORT)
     await site.start()
 
+async def main():
+    await app.start()
+    await start_web()
+    await asyncio.Event().wait()
+
 if __name__ == "__main__":
-    app.start()
     import asyncio
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(start_web())
-    loop.run_forever()
-      
+    asyncio.run(main())
