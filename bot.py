@@ -1,5 +1,6 @@
 import os
 import math
+import asyncio
 from pyrogram import Client, filters, idle
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
@@ -10,7 +11,11 @@ API_HASH = os.environ.get("API_HASH")
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 BIN_CHANNEL = int(os.environ.get("BIN_CHANNEL"))
 PORT = int(os.environ.get("PORT", 8080))
-SERVER_URL = os.environ.get("SERVER_URL", "") # Render-এর সার্ভিস ইউআরএল
+
+# SERVER_URL Formatting (Auto-fix https:// and slashes)
+RAW_SERVER_URL = os.environ.get("SERVER_URL", "")
+RAW_SERVER_URL = RAW_SERVER_URL.replace("https://", "").replace("http://", "").strip("/")
+SERVER_URL = f"https://{RAW_SERVER_URL}" if RAW_SERVER_URL else ""
 
 app = Client("StreamBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
@@ -26,19 +31,18 @@ def humanbytes(size):
 @app.on_message(filters.private & (filters.video | filters.document | filters.audio))
 async def stream_handler(client, message):
     try:
-        # ফাইলটি লগে ফরওয়ার্ড করা
+        # Log channel forwarding
         log_msg = await message.forward(chat_id=BIN_CHANNEL)
         file_id = log_msg.id
         
-        # ফাইলের নাম ও সাইজ বের করা
+        # File info
         media = message.video or message.document or message.audio
         file_name = getattr(media, "file_name", "Video_File.mp4")
         file_size = humanbytes(getattr(media, "file_size", 0))
         
-        # ডিরেক্ট লিঙ্ক জেনারেট
-        base_url = SERVER_URL.rstrip('/')
-        download_link = f"{base_url}/download/{file_id}"
-        watch_link = f"{base_url}/watch/{file_id}"
+        # Stream and Download URLs
+        download_link = f"{SERVER_URL}/download/{file_id}"
+        watch_link = f"{SERVER_URL}/watch/{file_id}"
 
         reply_text = (
             "Your Link Generated!\n\n"
@@ -59,11 +63,10 @@ async def stream_handler(client, message):
     except Exception as e:
         await message.reply_text(f"Error: {str(e)}")
 
-# কাস্টম এইচটিএমএল প্লেয়ার
+# Custom Web Player Page
 async def watch_page(request):
     file_id = request.match_info['file_id']
-    base_url = SERVER_URL.rstrip('/')
-    stream_url = f"{base_url}/download/{file_id}"
+    stream_url = f"{SERVER_URL}/download/{file_id}"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -129,19 +132,11 @@ async def start_web():
     await site.start()
 
 async def main():
-    # ওয়েব সার্ভার চালু করা
     await start_web()
-    
-    # পাইরোগ্রাম বট চালু করা
     await app.start()
     print("Bot Started Successfully with Polling!")
-    
-    # বটকে সার্বক্ষণিক চালু রাখার জন্য idle() কল করা
     await idle()
-    
-    # বট বন্ধ হলে সেফলি স্টপ করা
     await app.stop()
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
