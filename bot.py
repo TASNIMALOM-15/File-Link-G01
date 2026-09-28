@@ -1,6 +1,6 @@
 import os
 import math
-from pyrogram import Client, filters
+from pyrogram import Client, filters, idle
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiohttp import web
 
@@ -129,10 +129,18 @@ async def start_web():
     await site.start()
 
 async def main():
-    await app.start()
-    print("Bot Started Successfully!")
+    # ওয়েব সার্ভার চালু করা
     await start_web()
-    await asyncio.Event().wait()
+    
+    # পাইরোগ্রাম বট চালু করা
+    await app.start()
+    print("Bot Started Successfully with Polling!")
+    
+    # বটকে সার্বক্ষণিক চালু রাখার জন্য idle() কল করা
+    await idle()
+    
+    # বট বন্ধ হলে সেফলি স্টপ করা
+    await app.stop()
 
 if __name__ == "__main__":
     import asyncio
