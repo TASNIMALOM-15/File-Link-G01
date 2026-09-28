@@ -130,6 +130,7 @@ async def start_web():
 
 async def main():
     await app.start()
+    print("Bot Started Successfully!")
     await start_web()
     await asyncio.Event().wait()
 
